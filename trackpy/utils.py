@@ -55,6 +55,11 @@ if is_scipy_018:
 else:
     from scipy.spatial import cKDTree
 
+try:
+    is_scipy_since_100 = LooseVersion(scipy.__version__) >= LooseVersion('1.0.0')
+except ValueError:  # Probably a development version
+    is_scipy_since_100 = True
+
 
 def fit_powerlaw(data, plot=True, **kwargs):
     """Fit a powerlaw by doing a linear regression in log space."""
@@ -329,11 +334,11 @@ else:
 
 def _pandas_rolling_pre_018(df, window, *args, **kwargs):
     """Use rolling_mean() to compute a rolling average"""
-    return df.rolling_mean(window, *args, **kwargs)
+    return pd.rolling_mean(df, window, *args, **kwargs)
 
 def _pandas_rolling_since_018(df, window, *args, **kwargs):
     """Use rolling() to compute a rolling average"""
-    return df.rolling(window, *args, **kwargs)
+    return df.rolling(window, *args, **kwargs).mean()
 
 if is_pandas_since_018:
     pandas_rolling = _pandas_rolling_since_018
@@ -352,16 +357,18 @@ def guess_pos_columns(f):
 
 def default_pos_columns(ndim):
     """ Sets the default position column names """
-    return ['z', 'y', 'x'][-ndim:]
+    if ndim < 4:
+        return ['z', 'y', 'x'][-ndim:]
+    else:
+        return map(lambda i: 'x' + str(i), range(ndim))
 
 
 def default_size_columns(ndim, isotropic):
     """ Sets the default size column names """
     if isotropic:
-        size_columns = ['size']
+        return ['size']
     else:
-        size_columns = ['size_z', 'size_y', 'size_x'][-ndim:]
-    return size_columns
+        return ['size_' + cc for cc in default_pos_columns(ndim)]
 
 
 def is_isotropic(value):
